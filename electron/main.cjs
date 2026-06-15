@@ -46,8 +46,21 @@ function showWindow() {
   win.focus();
 }
 
+// Format a byte count with binary units (K, M, G, T) so the menu-bar text and
+// dropdown stay compact regardless of speed: 900 B, 1.2K, 3.4M, 1.1G …
+function fmtBytes(n) {
+  if (!n || n < 1) return '0';
+  const units = ['B', 'K', 'M', 'G', 'T'];
+  let i = 0;
+  while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+  // Whole numbers for bytes; one decimal once we're past 10 of a higher unit reads cleaner.
+  const v = i === 0 ? Math.round(n) : (n >= 100 ? Math.round(n) : n.toFixed(1));
+  return v + units[i];
+}
+
 // Tray icon: lives in the macOS menu bar / Windows system tray. Lets the app
 // keep running (and downloading) in the background after the window is closed.
+// The menu is rebuilt live (see updateTrayMenu) to show real download progress.
 function createTray() {
   const iconPath = process.platform === 'darwin'
     ? path.join(__dirname, 'assets', 'trayTemplate.png')
@@ -56,15 +69,40 @@ function createTray() {
   if (process.platform === 'darwin') img.setTemplateImage(true);
   tray = new Tray(img);
   tray.setToolTip('TorrentDrop');
-  tray.setContextMenu(Menu.buildFromTemplate([
-    { label: 'Open TorrentDrop', click: showWindow },
-    { type: 'separator' },
-    { label: 'Quit TorrentDrop', click: () => { isQuitting = true; app.quit(); } }
-  ]));
-  tray.on('click', showWindow);
+  updateTrayMenu([]);
+  // No tray.on('click') → clicking pops the live progress menu instead of
+  // forcing the full window open. "Open TorrentDrop" in the menu does that.
 }
 
-// Reflect live download activity in the tray (tooltip everywhere; menu-bar text on macOS).
+// Build the tray dropdown from the current torrent list: a line per active
+// download with its name, percent and speed, then Open / Quit shortcuts.
+function updateTrayMenu(downloading) {
+  if (!tray) return;
+  const items = [];
+  if (downloading.length) {
+    downloading.forEach((t) => {
+      const pct = Math.round((t.progress || 0) * 100);
+      const label = trim(t.name) + ' — ' + pct + '%'
+        + (t.downloadSpeed ? '  ↓' + fmtBytes(t.downloadSpeed) + '/s' : '');
+      items.push({ label, click: showWindow });
+    });
+  } else {
+    items.push({ label: 'No active downloads', enabled: false });
+  }
+  items.push({ type: 'separator' });
+  items.push({ label: 'Open TorrentDrop', click: showWindow });
+  items.push({ label: 'Quit TorrentDrop', click: () => { isQuitting = true; app.quit(); } });
+  tray.setContextMenu(Menu.buildFromTemplate(items));
+}
+
+// Keep menu-item names from overflowing the dropdown.
+function trim(s, max = 40) {
+  s = s || 'Fetching metadata…';
+  return s.length > max ? s.slice(0, max - 1) + '…' : s;
+}
+
+// Reflect live download activity in the tray: compact menu-bar text on macOS,
+// tooltip everywhere, and a dropdown listing each active download's progress.
 function startTrayStatus() {
   setInterval(() => {
     const req = http.get(APP_URL + 'api/torrents', (res) => {
@@ -73,11 +111,11 @@ function startTrayStatus() {
         try {
           const ts = JSON.parse(d).torrents || [];
           const dl = ts.filter((t) => t.status === 'downloading' || t.status === 'fetching');
-          let speed = 0; ts.forEach((t) => speed += t.downloadSpeed || 0);
+          let speed = 0; dl.forEach((t) => speed += t.downloadSpeed || 0);
+          updateTrayMenu(dl);
           if (dl.length) {
-            const mb = (speed / 1048576).toFixed(1);
-            tray.setToolTip('TorrentDrop — ' + dl.length + ' downloading · ' + mb + ' MB/s');
-            if (process.platform === 'darwin') tray.setTitle(' ↓' + mb);
+            tray.setToolTip('TorrentDrop — ' + dl.length + ' downloading · ' + fmtBytes(speed) + '/s');
+            if (process.platform === 'darwin') tray.setTitle(' ↓' + fmtBytes(speed));
           } else {
             tray.setToolTip('TorrentDrop');
             if (process.platform === 'darwin') tray.setTitle('');

@@ -1,6 +1,6 @@
 {
   "name": "torrentdrop",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "description": "A clean desktop torrent client: paste a magnet link, download from the full BitTorrent swarm, everything stays on your machine.",

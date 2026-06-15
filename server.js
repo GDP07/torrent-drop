@@ -112,7 +112,7 @@ const TRACKERS = [
 //    (this is the single biggest factor for seed/upload speed)
 //  - torrentPort: a fixed port you can also forward manually
 //  - download/upload limits removed (unlimited)
-function buildClient() {
+function buildClient(torrentPort) {
   const base = {
     maxConns: Math.max(config.maxConns || 0, MAX_CONNS),   // peers per torrent — never below the default floor
     maxWebConns: 50,             // parallel connections per web seed (huge for web-seeded releases)
@@ -121,7 +121,7 @@ function buildClient() {
     webSeeds: true,
     natUpnp: true,
     natPmp: true,
-    torrentPort: TORRENT_PORT,
+    torrentPort: torrentPort,
     downloadLimit: config.downloadLimit,
     uploadLimit: config.uploadLimit
   };
@@ -133,8 +133,31 @@ function buildClient() {
   }
 }
 
-const client = buildClient();
-client.on('error', (err) => console.error('[client]', err.message || err));
+// If the fixed peer port (6881) is already taken — e.g. a second TorrentDrop
+// instance is running — WebTorrent emits EADDRINUSE and *destroys the whole
+// client*, after which every add fails with "client is destroyed". Catch that
+// one case and transparently rebuild on an OS-chosen free port (0) so the app
+// keeps working; only port-forwarding for max seed speed is lost.
+let client;
+function initClient(port) {
+  client = buildClient(port);
+  let recovered = port === 0;   // already on a random port: don't loop
+  client.on('error', (err) => {
+    const msg = (err && err.message) || String(err);
+    if (!recovered && /EADDRINUSE/i.test(msg)) {
+      recovered = true;
+      console.warn('[client] peer port ' + TORRENT_PORT + ' in use — falling back to a random free port');
+      try { client.destroy(); } catch (e) {}
+      initClient(0);
+      // If a session was already restored onto the now-destroyed client, those
+      // torrents are gone from the new one — re-add them (addTorrent dedups).
+      try { restoreSession(); } catch (e) {}
+      return;
+    }
+    console.error('[client]', msg);
+  });
+}
+initClient(TORRENT_PORT);
 
 // Per-torrent extras the WebTorrent object doesn't track for us.
 const extra = new Map(); // infoHash -> { error, timeAdded, timer }

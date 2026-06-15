@@ -63,9 +63,6 @@
   .btn, .mini, .tab, .icon-btn { user-select: none; -webkit-user-select: none; }
   .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: none; border-radius: 10px; padding: 12px 18px; font-size: 14px; font-weight: 500; font-family: inherit; cursor: pointer; white-space: nowrap; background: var(--accent); color: #fff; transition: background 0.15s; }
   .btn:hover { background: var(--accent-hover); }
-  .sample { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
-  .sample a { color: var(--accent); cursor: pointer; text-decoration: none; }
-  .sample a:hover { text-decoration: underline; }
   .autosave { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); margin-bottom: 16px; cursor: pointer; user-select: none; }
   .autosave input { accent-color: var(--accent); width: 15px; height: 15px; cursor: pointer; }
 
@@ -183,7 +180,6 @@
     <button class="icon-btn" id="scheduleBtn" title="Schedule for later" aria-label="Schedule"><i class="ti ti-clock"></i></button>
     <button class="btn" id="addBtn"><i class="ti ti-cloud-download"></i> <span data-i18n="add_btn">Add torrent</span></button>
   </div>
-  <div class="sample"><span data-i18n="sample_text">Need something to test?</span> <a id="sampleBtn" data-i18n="sample_link">Load the Sintel sample (Creative Commons, well-seeded)</a></div>
   <label class="autosave"><input type="checkbox" id="autoSaveChk" /> <span data-i18n="autosave_label">Auto-save finished torrents to my device (browser Downloads)</span></label>
 
   <div class="tabs" id="tabs">
@@ -204,7 +200,6 @@
 <div class="toasts" id="toasts"></div>
 
 <script>
-var SINTEL = 'magnet:?xt=urn:btih:08ada5a7a6183aae1e09d831df6748d566095a10&dn=Sintel';
 
 var isDesktop = !!(window.tdNative && window.tdNative.showItem); // running in the Electron app
 var torrents = [];
@@ -222,7 +217,6 @@ var statsEl = document.getElementById('stats');
 var listEl = document.getElementById('list');
 var inputEl = document.getElementById('input');
 var addBtn = document.getElementById('addBtn');
-var sampleBtn = document.getElementById('sampleBtn');
 var tabsEl = document.getElementById('tabs');
 var toastsEl = document.getElementById('toasts');
 var themeBtn = document.getElementById('themeBtn');
@@ -294,7 +288,6 @@ var LANGS = [['en','English'],['es','Español'],['fr','Français'],['de','Deutsc
 var I18N = {
   en: {
     app_tag:'local engine', add_placeholder:'Paste a magnet link, info hash, or .torrent URL…', add_btn:'Add torrent',
-    sample_text:'Need something to test?', sample_link:'Load the Sintel sample (Creative Commons, well-seeded)',
     autosave_label:'Auto-save finished torrents to my device (browser Downloads)',
     tab_all:'All', tab_downloading:'Downloading', tab_seeding:'Seeding',
     stat_downloaded:'Downloaded', stat_dl_speed:'Download speed', stat_active:'Active', stat_seeding:'Seeding',
@@ -315,7 +308,6 @@ var I18N = {
   },
   es: {
     app_tag:'motor local', add_placeholder:'Pega un enlace magnet, info hash o URL .torrent…', add_btn:'Añadir torrent',
-    sample_text:'¿Necesitas probar?', sample_link:'Cargar el ejemplo Sintel (Creative Commons)',
     autosave_label:'Guardar automáticamente los torrents terminados en mi dispositivo',
     tab_all:'Todos', tab_downloading:'Descargando', tab_seeding:'Compartiendo',
     stat_downloaded:'Descargado', stat_dl_speed:'Velocidad', stat_active:'Activos', stat_seeding:'Compartiendo',
@@ -336,7 +328,6 @@ var I18N = {
   },
   fr: {
     app_tag:'moteur local', add_placeholder:'Collez un lien magnet, un info hash ou une URL .torrent…', add_btn:'Ajouter',
-    sample_text:'Besoin d’un test ?', sample_link:'Charger l’exemple Sintel (Creative Commons)',
     autosave_label:'Enregistrer automatiquement les torrents terminés sur mon appareil',
     tab_all:'Tous', tab_downloading:'Téléchargement', tab_seeding:'Partage',
     stat_downloaded:'Téléchargé', stat_dl_speed:'Vitesse', stat_active:'Actifs', stat_seeding:'Partage',
@@ -357,7 +348,6 @@ var I18N = {
   },
   de: {
     app_tag:'lokale Engine', add_placeholder:'Magnet-Link, Info-Hash oder .torrent-URL einfügen…', add_btn:'Hinzufügen',
-    sample_text:'Etwas zum Testen?', sample_link:'Sintel-Beispiel laden (Creative Commons)',
     autosave_label:'Fertige Torrents automatisch auf mein Gerät speichern',
     tab_all:'Alle', tab_downloading:'Lädt', tab_seeding:'Seeden',
     stat_downloaded:'Geladen', stat_dl_speed:'Geschwindigkeit', stat_active:'Aktiv', stat_seeding:'Seeden',
@@ -378,7 +368,6 @@ var I18N = {
   },
   pt: {
     app_tag:'motor local', add_placeholder:'Cole um link magnet, info hash ou URL .torrent…', add_btn:'Adicionar',
-    sample_text:'Quer testar?', sample_link:'Carregar o exemplo Sintel (Creative Commons)',
     autosave_label:'Salvar automaticamente torrents concluídos no meu dispositivo',
     tab_all:'Todos', tab_downloading:'Baixando', tab_seeding:'Semeando',
     stat_downloaded:'Baixado', stat_dl_speed:'Velocidade', stat_active:'Ativos', stat_seeding:'Semeando',
@@ -399,7 +388,6 @@ var I18N = {
   },
   ar: {
     app_tag:'محرك محلي', add_placeholder:'الصق رابط مغناطيسي أو info hash أو رابط ‎.torrent…', add_btn:'إضافة',
-    sample_text:'تريد التجربة؟', sample_link:'تحميل مثال Sintel (المشاع الإبداعي)',
     autosave_label:'حفظ التورنتات المكتملة تلقائيًا على جهازي',
     tab_all:'الكل', tab_downloading:'التنزيل', tab_seeding:'المشاركة',
     stat_downloaded:'تم التنزيل', stat_dl_speed:'السرعة', stat_active:'نشط', stat_seeding:'المشاركة',
@@ -420,7 +408,6 @@ var I18N = {
   },
   zh: {
     app_tag:'本地引擎', add_placeholder:'粘贴磁力链接、info hash 或 .torrent 网址…', add_btn:'添加',
-    sample_text:'想测试一下？', sample_link:'加载 Sintel 示例（知识共享）',
     autosave_label:'自动将完成的种子保存到我的设备',
     tab_all:'全部', tab_downloading:'下载中', tab_seeding:'做种',
     stat_downloaded:'已下载', stat_dl_speed:'下载速度', stat_active:'活动', stat_seeding:'做种',
@@ -441,7 +428,6 @@ var I18N = {
   },
   hi: {
     app_tag:'लोकल इंजन', add_placeholder:'मैग्नेट लिंक, info hash या .torrent URL पेस्ट करें…', add_btn:'जोड़ें',
-    sample_text:'टेस्ट करना है?', sample_link:'Sintel नमूना लोड करें (Creative Commons)',
     autosave_label:'पूर्ण टोरेंट अपने डिवाइस पर स्वतः सहेजें',
     tab_all:'सभी', tab_downloading:'डाउनलोड', tab_seeding:'सीडिंग',
     stat_downloaded:'डाउनलोड हुआ', stat_dl_speed:'गति', stat_active:'सक्रिय', stat_seeding:'सीडिंग',
@@ -887,7 +873,6 @@ function renderScheduled(){
 /* ---- events ---- */
 addBtn.addEventListener('click', function(){ addInput(); });
 inputEl.addEventListener('keydown', function(e){ if (e.key==='Enter'){ e.preventDefault(); addInput(); } });
-sampleBtn.addEventListener('click', function(){ addInput(SINTEL); });
 document.getElementById('scheduleBtn').addEventListener('click', openSchedule);
 document.getElementById('scheduleOverlay').addEventListener('click', function(e){ if (e.target===this) closeSchedule(); });
 
