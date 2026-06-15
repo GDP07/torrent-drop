@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+out/
+*.dmg
+*.exe
+*.zip
+*.blockmap
+
+# Runtime data — downloaded files and local config never belong in the repo
+downloads/
+*.log
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

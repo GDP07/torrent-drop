@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TorrentDrop</title>
+<link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css" />
+<style>
+  :root {
+    --bg: #f5f7f6; --card: #ffffff; --text: #16201d; --muted: #687774;
+    --border: rgba(0,0,0,0.05); --stat-bg: #f4f6f5; --pill-bg: #eef2f0; --pill-text: #5a6663;
+    --input-bg: #f5f7f6; --accent: #0f6e56; --accent-hover: #1d9e75; --accent-soft: rgba(15,110,86,0.10);
+    --error: #d63a3f; --error-soft: rgba(214,58,63,0.10);
+    --warn-bg: #fff5d6; --warn-text: #7a5c00; --warn-border: rgba(122,92,0,0.25);
+    --track: rgba(0,0,0,0.07); --shadow: none;
+    --toast-bg: #1c2522; --toast-text: #f3f5f4;
+  }
+  [data-theme="dark"] {
+    --bg: #0d100f; --card: #161a18; --text: #e7ebe9; --muted: #95a09c;
+    --border: rgba(255,255,255,0.07); --stat-bg: #151917; --pill-bg: #1e2422; --pill-text: #aab4b0;
+    --input-bg: #151917; --accent: #169c79; --accent-hover: #1fc295; --accent-soft: rgba(31,194,149,0.13);
+    --error: #ff6166; --error-soft: rgba(255,97,102,0.13);
+    --warn-bg: #2c2510; --warn-text: #e7c869; --warn-border: rgba(231,200,105,0.25);
+    --track: rgba(255,255,255,0.08); --shadow: none;
+    --toast-bg: #e7ebe9; --toast-text: #16201d;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 14px; font-weight: 400; line-height: 1.45; -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 840px; margin: 0 auto; padding: 30px 20px 90px; }
+
+  .banner {
+    display: none; align-items: center; gap: 8px;
+    background: var(--warn-bg); color: var(--warn-text); border: 0.5px solid var(--warn-border);
+    border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 16px;
+  }
+  .banner.show { display: flex; }
+  .banner.err { background: var(--error-soft); color: var(--error); border-color: var(--error); }
+  .banner i { font-size: 18px; }
+  .banner code { background: rgba(0,0,0,0.12); padding: 1px 6px; border-radius: 4px; }
+
+  header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 26px; }
+  .brand { display: flex; align-items: center; gap: 11px; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+  .brand .logo { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: var(--accent); color: #fff; font-size: 20px; }
+  .brand .tag { font-size: 10.5px; color: var(--muted); font-weight: 500; background: var(--stat-bg); padding: 3px 9px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .icon-btn { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 10px; border: none; background: var(--stat-bg); color: var(--text); cursor: pointer; font-size: 18px; transition: background 0.15s; }
+  .icon-btn:hover { background: var(--pill-bg); }
+
+  .stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 30px; }
+  .stat { background: transparent; border-radius: 0; padding: 0; }
+  .stat .label { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.045em; }
+  .stat .label i { font-size: 13px; opacity: 0.7; }
+  .stat .value { font-size: 23px; font-weight: 600; letter-spacing: -0.02em; }
+
+  .add { display: flex; gap: 10px; margin-bottom: 8px; }
+  .add input { flex: 1; min-width: 0; background: var(--input-bg); color: var(--text); border: 1px solid transparent; border-radius: 11px; padding: 13px 15px; font-size: 14px; font-family: inherit; outline: none; transition: border-color 0.15s, box-shadow 0.15s; }
+  .add input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .btn, .mini, .tab, .icon-btn { user-select: none; -webkit-user-select: none; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: none; border-radius: 10px; padding: 12px 18px; font-size: 14px; font-weight: 500; font-family: inherit; cursor: pointer; white-space: nowrap; background: var(--accent); color: #fff; transition: background 0.15s; }
+  .btn:hover { background: var(--accent-hover); }
+  .sample { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+  .sample a { color: var(--accent); cursor: pointer; text-decoration: none; }
+  .sample a:hover { text-decoration: underline; }
+  .autosave { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); margin-bottom: 16px; cursor: pointer; user-select: none; }
+  .autosave input { accent-color: var(--accent); width: 15px; height: 15px; cursor: pointer; }
+
+  .tabs { display: flex; gap: 22px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+  .tab { border: none; background: transparent; color: var(--muted); border-radius: 0; padding: 9px 1px; font-size: 13.5px; cursor: pointer; transition: color 0.15s; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .tab:hover { color: var(--text); }
+  .tab.active { background: transparent; color: var(--text); font-weight: 600; border-bottom-color: var(--accent); }
+
+  .list { display: flex; flex-direction: column; gap: 12px; }
+  .empty { text-align: center; color: var(--muted); padding: 48px 16px; border: 1px dashed var(--border); border-radius: 12px; }
+  .empty i { font-size: 34px; display: block; margin-bottom: 10px; opacity: 0.6; }
+
+  .torrent { background: var(--card); border: none; border-radius: 14px; padding: 16px 18px; box-shadow: none; transition: background 0.15s; }
+  .torrent.seeding, .torrent.error { border: none; }
+  .t-head { display: flex; align-items: flex-start; gap: 12px; }
+  .t-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 11px; background: var(--stat-bg); color: var(--muted); font-size: 20px; flex-shrink: 0; }
+  .t-main { flex: 1; min-width: 0; }
+  .t-title-row { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
+  .t-name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .pill { flex-shrink: 0; font-size: 10px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: var(--pill-bg); color: var(--pill-text); text-transform: uppercase; letter-spacing: 0.03em; }
+  .pill.downloading { background: var(--accent-soft); color: var(--accent); }
+  .pill.seeding { background: var(--accent-soft); color: var(--accent-hover); }
+  .pill.error { background: var(--error-soft); color: var(--error); }
+  .t-sub { font-size: 12px; color: var(--muted); }
+  .bar { height: 3px; border-radius: 3px; background: var(--track); overflow: hidden; margin: 12px 0; }
+  .bar > span { display: block; height: 100%; border-radius: 2px; background: var(--accent); transition: width 0.4s ease; }
+  .t-meta { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+  .t-meta span { display: inline-flex; align-items: center; gap: 4px; }
+  .t-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .mini { display: inline-flex; align-items: center; gap: 6px; border: none; background: var(--stat-bg); color: var(--text); border-radius: 9px; padding: 8px 13px; font-size: 13px; font-family: inherit; cursor: pointer; transition: background 0.15s, color 0.15s; }
+  .mini:hover { background: var(--pill-bg); }
+  .mini.danger:hover { color: var(--error); background: var(--error-soft); }
+  .mini.primary { background: var(--accent); border-color: transparent; color: #fff; }
+  .mini.primary:hover { background: var(--accent-hover); }
+  .mini:disabled { opacity: 0.5; cursor: default; }
+  .mini:disabled:hover { background: transparent; }
+
+  .files { margin-top: 14px; border-top: 0.5px solid var(--border); padding-top: 10px; display: flex; flex-direction: column; gap: 10px; }
+  .file { display: flex; align-items: center; gap: 10px; }
+  .file .f-icon { color: var(--muted); font-size: 18px; flex-shrink: 0; }
+  .file .f-main { flex: 1; min-width: 0; }
+  .file .f-name { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .file .f-sub { font-size: 11px; color: var(--muted); }
+  .file .bar { margin: 5px 0 0; }
+  .file .mini { flex-shrink: 0; padding: 6px 10px; font-size: 12px; }
+
+  .toasts { position: fixed; right: 16px; bottom: 16px; display: flex; flex-direction: column; gap: 8px; z-index: 1000; max-width: calc(100vw - 32px); }
+  .toast { background: var(--toast-bg); color: var(--toast-text); padding: 11px 16px; border-radius: 10px; font-size: 13px; box-shadow: 0 6px 20px rgba(0,0,0,0.18); opacity: 0; transform: translateY(8px); transition: opacity 0.25s, transform 0.25s; }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .spin { animation: spin 0.9s linear infinite; display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (max-width: 600px) {
+    .stats { grid-template-columns: repeat(2,1fr); }
+    .add { flex-direction: column; }
+    .add .btn { width: 100%; }
+  }
+
+  /* ---- wizard / settings modal ---- */
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; align-items: center; justify-content: center; z-index: 2000; padding: 16px; }
+  .overlay.show { display: flex; }
+  .modal { background: var(--card); border: 0.5px solid var(--border); border-radius: 16px; width: 100%; max-width: 440px; padding: 26px; box-shadow: 0 20px 60px rgba(0,0,0,0.35); max-height: calc(100vh - 32px); overflow-y: auto; overflow-x: hidden; }
+  .src-pill { display: flex; align-items: center; gap: 8px; background: var(--stat-bg); border: 0.5px solid var(--border); border-radius: 9px; padding: 9px 12px; margin-bottom: 20px; font-size: 12.5px; color: var(--muted); }
+  .src-pill i { flex-shrink: 0; font-size: 15px; }
+  .src-pill span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .modal .w-logo { width: 48px; height: 48px; border-radius: 12px; background: var(--accent); color: #fff; display: grid; place-items: center; font-size: 26px; margin-bottom: 16px; }
+  .modal h2 { margin: 0 0 6px; font-size: 20px; font-weight: 600; }
+  .modal p.sub { margin: 0 0 20px; color: var(--muted); font-size: 13.5px; }
+  .w-steps { display: flex; gap: 6px; margin-bottom: 18px; }
+  .w-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--track); }
+  .w-dot.on { background: var(--accent); }
+  .field { margin-bottom: 18px; }
+  .field > label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 8px; }
+  .field select, .field input[type=text], .field input[type=number], .field input[type=datetime-local] { width: 100%; padding: 10px 12px; border-radius: 9px; border: 0.5px solid var(--border); background: var(--input-bg); color: var(--text); font-size: 14px; font-family: inherit; outline: none; }
+  .field select:focus, .field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .field .hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .choice { display: flex; flex-direction: column; gap: 10px; }
+  .opt { display: flex; gap: 11px; align-items: flex-start; border: 1px solid var(--border); border-radius: 11px; padding: 12px 13px; cursor: pointer; transition: border-color .15s, background .15s; }
+  .opt:hover { background: var(--stat-bg); }
+  .opt.sel { border-color: var(--accent); background: var(--accent-soft); }
+  .opt input { margin-top: 2px; accent-color: var(--accent); }
+  .opt .o-title { font-size: 14px; font-weight: 500; }
+  .opt .o-desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .w-actions { display: flex; justify-content: space-between; gap: 10px; margin-top: 22px; }
+  .btn.ghost { background: transparent; color: var(--muted); border: 0.5px solid var(--border); }
+  .btn.ghost:hover { background: var(--stat-bg); }
+  [dir=rtl] .w-actions { flex-direction: row-reverse; }
+  [dir=rtl] .opt { flex-direction: row-reverse; text-align: right; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="banner err" id="banner">
+    <i class="ti ti-plug-connected-x"></i>
+    <span>Can't reach the local engine. In the project folder run <code>node server.js</code>, then refresh.</span>
+  </div>
+
+  <header>
+    <div class="brand">
+      <span class="logo"><i class="ti ti-magnet"></i></span>
+      <span>TorrentDrop</span>
+      <span class="tag" data-i18n="app_tag">local engine</span>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="icon-btn" id="settingsBtn" title="Settings" aria-label="Settings"><i class="ti ti-settings"></i></button>
+      <button class="icon-btn" id="themeBtn" title="Toggle theme" aria-label="Toggle theme"><i class="ti ti-moon"></i></button>
+    </div>
+  </header>
+
+  <section class="stats" id="stats"></section>
+
+  <div class="add">
+    <input id="input" type="text" data-i18n-ph="add_placeholder" placeholder="Paste a magnet link, info hash, or .torrent URL…" autocomplete="off" spellcheck="false" />
+    <button class="icon-btn" id="scheduleBtn" title="Schedule for later" aria-label="Schedule"><i class="ti ti-clock"></i></button>
+    <button class="btn" id="addBtn"><i class="ti ti-cloud-download"></i> <span data-i18n="add_btn">Add torrent</span></button>
+  </div>
+  <div class="sample"><span data-i18n="sample_text">Need something to test?</span> <a id="sampleBtn" data-i18n="sample_link">Load the Sintel sample (Creative Commons, well-seeded)</a></div>
+  <label class="autosave"><input type="checkbox" id="autoSaveChk" /> <span data-i18n="autosave_label">Auto-save finished torrents to my device (browser Downloads)</span></label>
+
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-filter="all" data-i18n="tab_all">All</button>
+    <button class="tab" data-filter="downloading" data-i18n="tab_downloading">Downloading</button>
+    <button class="tab" data-filter="seeding" data-i18n="tab_seeding">Seeding</button>
+    <button class="tab" data-filter="scheduled" data-i18n="tab_scheduled">Scheduled</button>
+    <button class="tab" data-filter="history" data-i18n="tab_history">History</button>
+  </div>
+
+  <div class="list" id="list"></div>
+</div>
+
+<div class="overlay" id="wizard"><div class="modal" id="wizardModal"></div></div>
+<div class="overlay" id="settingsOverlay"><div class="modal" id="settingsModal"></div></div>
+<div class="overlay" id="scheduleOverlay"><div class="modal" id="scheduleModal"></div></div>
+
+<div class="toasts" id="toasts"></div>
+
+<script>
+var SINTEL = 'magnet:?xt=urn:btih:08ada5a7a6183aae1e09d831df6748d566095a10&dn=Sintel';
+
+var isDesktop = !!(window.tdNative && window.tdNative.showItem); // running in the Electron app
+var torrents = [];
+var history = [];
+var scheduled = [];
+var expanded = {};
+var filter = 'all';
+var connected = false;
+var seenStatus = {};   // infoHash -> last seen status (to detect completion transitions)
+var autoSaved = {};    // infoHash -> already auto-downloaded this session
+var autoSave = true;   // auto-download finished torrents to the browser
+
+var bannerEl = document.getElementById('banner');
+var statsEl = document.getElementById('stats');
+var listEl = document.getElementById('list');
+var inputEl = document.getElementById('input');
+var addBtn = document.getElementById('addBtn');
+var sampleBtn = document.getElementById('sampleBtn');
+var tabsEl = document.getElementById('tabs');
+var toastsEl = document.getElementById('toasts');
+var themeBtn = document.getElementById('themeBtn');
+var autoSaveChk = document.getElementById('autoSaveChk');
+
+/* ---- helpers ---- */
+function find(ih){ for (var i=0;i<torrents.length;i++){ if (torrents[i].infoHash===ih) return torrents[i]; } return null; }
+
+function formatSize(b){
+  if (!b || b<0) b=0;
+  if (b<1024) return Math.round(b)+' B';
+  var kb=b/1024; if (kb<1024) return (kb>=100?Math.round(kb):kb.toFixed(1))+' KB';
+  var mb=kb/1024; if (mb<1024) return (mb>=100?Math.round(mb):mb.toFixed(1))+' MB';
+  var gb=mb/1024; return (gb>=100?Math.round(gb):gb.toFixed(1))+' GB';
+}
+function formatSpeed(bps){
+  if (!bps || bps<1) return '0 KB/s';
+  if (bps<1024) return Math.round(bps)+' B/s';
+  if (bps<1024*1024) return (bps/1024).toFixed(1)+' KB/s';
+  return (bps/(1024*1024)).toFixed(1)+' MB/s';
+}
+function formatETA(sec){
+  if (!isFinite(sec) || sec<=0) return '—';
+  sec=Math.round(sec);
+  var h=Math.floor(sec/3600), m=Math.floor((sec%3600)/60), s=sec%60;
+  if (h>0) return h+'h '+m+'m';
+  if (m>0) return m+'m '+s+'s';
+  return s+'s';
+}
+
+var EXT = {
+  movie: ['mp4','mkv','avi','mov','webm','flv','wmv','m4v','mpg','mpeg','ts','3gp'],
+  music: ['mp3','flac','wav','aac','ogg','m4a','wma','opus','aiff'],
+  archive: ['zip','rar','7z','tar','gz','bz2','xz','iso','dmg'],
+  photo: ['jpg','jpeg','png','gif','webp','bmp','svg','tiff','heic'],
+  doc: ['pdf','doc','docx','txt','epub','mobi','rtf','odt','md']
+};
+function extOf(n){ var p=(n||'').split('.'); return p.length>1?p.pop().toLowerCase():''; }
+function getFileIcon(n){
+  var e=extOf(n);
+  if (EXT.movie.indexOf(e)>=0) return 'ti-movie';
+  if (EXT.music.indexOf(e)>=0) return 'ti-music';
+  if (EXT.archive.indexOf(e)>=0) return 'ti-file-zip';
+  if (EXT.photo.indexOf(e)>=0) return 'ti-photo';
+  if (EXT.doc.indexOf(e)>=0) return 'ti-file-text';
+  return 'ti-file';
+}
+function getTorrentIcon(o){
+  var f=o.files||[], mv=false, mu=false, ar=false;
+  for (var i=0;i<f.length;i++){ var e=extOf(f[i].name);
+    if (EXT.movie.indexOf(e)>=0) mv=true; else if (EXT.music.indexOf(e)>=0) mu=true; else if (EXT.archive.indexOf(e)>=0) ar=true; }
+  if (mv) return 'ti-movie';
+  if (mu) return 'ti-music';
+  if (ar) return 'ti-file-zip';
+  if (f.length===1) return getFileIcon(f[0].name);
+  return 'ti-folder';
+}
+function escapeHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function truncate(s,n){ s=String(s==null?'':s); return s.length>n?s.slice(0,n-1)+'…':s; }
+
+function showToast(text){
+  var el=document.createElement('div'); el.className='toast'; el.textContent=text; toastsEl.appendChild(el);
+  requestAnimationFrame(function(){ el.classList.add('show'); });
+  setTimeout(function(){ el.classList.remove('show'); setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); },300); },3000);
+}
+
+/* ---- i18n ---- */
+var LANGS = [['en','English'],['es','Español'],['fr','Français'],['de','Deutsch'],['pt','Português'],['ar','العربية'],['zh','中文'],['hi','हिन्दी']];
+var I18N = {
+  en: {
+    app_tag:'local engine', add_placeholder:'Paste a magnet link, info hash, or .torrent URL…', add_btn:'Add torrent',
+    sample_text:'Need something to test?', sample_link:'Load the Sintel sample (Creative Commons, well-seeded)',
+    autosave_label:'Auto-save finished torrents to my device (browser Downloads)',
+    tab_all:'All', tab_downloading:'Downloading', tab_seeding:'Seeding',
+    stat_downloaded:'Downloaded', stat_dl_speed:'Download speed', stat_active:'Active', stat_seeding:'Seeding',
+    empty_main:'Paste a magnet link above to start downloading.', empty_filter:'No torrents in this view.',
+    st_fetching:'Fetching', st_seeding:'Seeding', st_paused:'Paused', st_error:'Error', st_downloading:'Downloading {p}%',
+    save:'Save', downloading:'Downloading…', save_to_device:'Save to device', retry:'Retry', pause:'Pause', resume:'Resume', remove:'Remove',
+    hide_files:'Hide files', files_n:'{n} files', peers:'peers', done:'done',
+    w_welcome_t:'Welcome to TorrentDrop', w_welcome_s:'A quick setup — under a minute.', w_lang:'Language',
+    w_next:'Next', w_back:'Back', w_get_started:'Get started',
+    w_seed_t:'Sharing & seeding', w_seed_s:'After a download finishes, should TorrentDrop keep uploading to others?',
+    w_seed_yes_t:'Keep seeding (recommended)', w_seed_yes_d:'Stay connected and upload to help the swarm. Better for everyone.',
+    w_seed_no_t:'Stop when done', w_seed_no_d:'Finish downloading, then stop uploading immediately.',
+    w_ratio:'Stop seeding at ratio (0 = forever)', w_ratio_hint:'e.g. 2 means upload twice what you downloaded, then stop.',
+    w_done_t:'You’re all set', w_done_s:'TorrentDrop is ready. Paste a magnet link to start.',
+    s_title:'Settings', s_sub:'Some changes apply after a restart.', s_lang:'Language', s_seed:'Seeding',
+    s_seed_on:'Keep seeding after download', s_seed_off:'Stop uploading when done', s_ratio:'Seed ratio limit (0 = unlimited)',
+    s_autosave:'Auto-save finished files to my device', s_save:'Save', s_cancel:'Cancel', s_saved:'Settings saved', s_restart_note:'Connection/folder changes take effect on restart.'
+  },
+  es: {
+    app_tag:'motor local', add_placeholder:'Pega un enlace magnet, info hash o URL .torrent…', add_btn:'Añadir torrent',
+    sample_text:'¿Necesitas probar?', sample_link:'Cargar el ejemplo Sintel (Creative Commons)',
+    autosave_label:'Guardar automáticamente los torrents terminados en mi dispositivo',
+    tab_all:'Todos', tab_downloading:'Descargando', tab_seeding:'Compartiendo',
+    stat_downloaded:'Descargado', stat_dl_speed:'Velocidad', stat_active:'Activos', stat_seeding:'Compartiendo',
+    empty_main:'Pega un enlace magnet arriba para empezar.', empty_filter:'No hay torrents en esta vista.',
+    st_fetching:'Obteniendo', st_seeding:'Compartiendo', st_paused:'Pausado', st_error:'Error', st_downloading:'Descargando {p}%',
+    save:'Guardar', downloading:'Descargando…', save_to_device:'Guardar', retry:'Reintentar', pause:'Pausar', resume:'Reanudar', remove:'Eliminar',
+    hide_files:'Ocultar archivos', files_n:'{n} archivos', peers:'pares', done:'listo',
+    w_welcome_t:'Bienvenido a TorrentDrop', w_welcome_s:'Configuración rápida — menos de un minuto.', w_lang:'Idioma',
+    w_next:'Siguiente', w_back:'Atrás', w_get_started:'Empezar',
+    w_seed_t:'Compartir y sembrar', w_seed_s:'Cuando termine una descarga, ¿debe TorrentDrop seguir subiendo a otros?',
+    w_seed_yes_t:'Seguir compartiendo (recomendado)', w_seed_yes_d:'Sube para ayudar a la red. Mejor para todos.',
+    w_seed_no_t:'Detener al terminar', w_seed_no_d:'Termina la descarga y deja de subir de inmediato.',
+    w_ratio:'Detener al alcanzar ratio (0 = siempre)', w_ratio_hint:'p. ej. 2 = subir el doble de lo descargado.',
+    w_done_t:'Todo listo', w_done_s:'TorrentDrop está listo. Pega un enlace magnet.',
+    s_title:'Ajustes', s_sub:'Algunos cambios se aplican al reiniciar.', s_lang:'Idioma', s_seed:'Compartir',
+    s_seed_on:'Seguir compartiendo tras descargar', s_seed_off:'Dejar de subir al terminar', s_ratio:'Límite de ratio (0 = ilimitado)',
+    s_autosave:'Guardar archivos terminados en mi dispositivo', s_save:'Guardar', s_cancel:'Cancelar', s_saved:'Ajustes guardados', s_restart_note:'Los cambios de conexión/carpeta se aplican al reiniciar.'
+  },
+  fr: {
+    app_tag:'moteur local', add_placeholder:'Collez un lien magnet, un info hash ou une URL .torrent…', add_btn:'Ajouter',
+    sample_text:'Besoin d’un test ?', sample_link:'Charger l’exemple Sintel (Creative Commons)',
+    autosave_label:'Enregistrer automatiquement les torrents terminés sur mon appareil',
+    tab_all:'Tous', tab_downloading:'Téléchargement', tab_seeding:'Partage',
+    stat_downloaded:'Téléchargé', stat_dl_speed:'Vitesse', stat_active:'Actifs', stat_seeding:'Partage',
+    empty_main:'Collez un lien magnet ci-dessus pour commencer.', empty_filter:'Aucun torrent dans cette vue.',
+    st_fetching:'Récupération', st_seeding:'Partage', st_paused:'En pause', st_error:'Erreur', st_downloading:'Téléchargement {p}%',
+    save:'Enregistrer', downloading:'Téléchargement…', save_to_device:'Enregistrer', retry:'Réessayer', pause:'Pause', resume:'Reprendre', remove:'Supprimer',
+    hide_files:'Masquer les fichiers', files_n:'{n} fichiers', peers:'pairs', done:'terminé',
+    w_welcome_t:'Bienvenue sur TorrentDrop', w_welcome_s:'Configuration rapide — moins d’une minute.', w_lang:'Langue',
+    w_next:'Suivant', w_back:'Retour', w_get_started:'Commencer',
+    w_seed_t:'Partage (seeding)', w_seed_s:'Une fois le téléchargement terminé, TorrentDrop doit-il continuer à partager ?',
+    w_seed_yes_t:'Continuer le partage (recommandé)', w_seed_yes_d:'Restez connecté pour aider le réseau. Mieux pour tous.',
+    w_seed_no_t:'Arrêter à la fin', w_seed_no_d:'Terminer puis arrêter l’envoi immédiatement.',
+    w_ratio:'Arrêter au ratio (0 = toujours)', w_ratio_hint:'ex. 2 = envoyer le double du téléchargé.',
+    w_done_t:'Tout est prêt', w_done_s:'TorrentDrop est prêt. Collez un lien magnet.',
+    s_title:'Paramètres', s_sub:'Certains changements nécessitent un redémarrage.', s_lang:'Langue', s_seed:'Partage',
+    s_seed_on:'Continuer le partage après téléchargement', s_seed_off:'Arrêter l’envoi à la fin', s_ratio:'Limite de ratio (0 = illimité)',
+    s_autosave:'Enregistrer les fichiers terminés sur mon appareil', s_save:'Enregistrer', s_cancel:'Annuler', s_saved:'Paramètres enregistrés', s_restart_note:'Les changements de connexion/dossier prennent effet au redémarrage.'
+  },
+  de: {
+    app_tag:'lokale Engine', add_placeholder:'Magnet-Link, Info-Hash oder .torrent-URL einfügen…', add_btn:'Hinzufügen',
+    sample_text:'Etwas zum Testen?', sample_link:'Sintel-Beispiel laden (Creative Commons)',
+    autosave_label:'Fertige Torrents automatisch auf mein Gerät speichern',
+    tab_all:'Alle', tab_downloading:'Lädt', tab_seeding:'Seeden',
+    stat_downloaded:'Geladen', stat_dl_speed:'Geschwindigkeit', stat_active:'Aktiv', stat_seeding:'Seeden',
+    empty_main:'Füge oben einen Magnet-Link ein, um zu starten.', empty_filter:'Keine Torrents in dieser Ansicht.',
+    st_fetching:'Abrufen', st_seeding:'Seeden', st_paused:'Pausiert', st_error:'Fehler', st_downloading:'Lädt {p}%',
+    save:'Speichern', downloading:'Lädt…', save_to_device:'Speichern', retry:'Erneut', pause:'Pause', resume:'Fortsetzen', remove:'Entfernen',
+    hide_files:'Dateien ausblenden', files_n:'{n} Dateien', peers:'Peers', done:'fertig',
+    w_welcome_t:'Willkommen bei TorrentDrop', w_welcome_s:'Schnelle Einrichtung — unter einer Minute.', w_lang:'Sprache',
+    w_next:'Weiter', w_back:'Zurück', w_get_started:'Los geht’s',
+    w_seed_t:'Teilen & Seeden', w_seed_s:'Soll TorrentDrop nach dem Download weiter zu anderen hochladen?',
+    w_seed_yes_t:'Weiter seeden (empfohlen)', w_seed_yes_d:'Bleib verbunden und lade hoch — besser für alle.',
+    w_seed_no_t:'Bei Fertigstellung stoppen', w_seed_no_d:'Download beenden, dann sofort aufhören hochzuladen.',
+    w_ratio:'Seeden bei Ratio stoppen (0 = unbegrenzt)', w_ratio_hint:'z. B. 2 = doppelt so viel hochladen wie geladen.',
+    w_done_t:'Alles bereit', w_done_s:'TorrentDrop ist bereit. Füge einen Magnet-Link ein.',
+    s_title:'Einstellungen', s_sub:'Einige Änderungen gelten nach Neustart.', s_lang:'Sprache', s_seed:'Seeden',
+    s_seed_on:'Nach Download weiter seeden', s_seed_off:'Hochladen bei Fertigstellung stoppen', s_ratio:'Ratio-Limit (0 = unbegrenzt)',
+    s_autosave:'Fertige Dateien auf mein Gerät speichern', s_save:'Speichern', s_cancel:'Abbrechen', s_saved:'Einstellungen gespeichert', s_restart_note:'Verbindungs-/Ordneränderungen gelten nach Neustart.'
+  },
+  pt: {
+    app_tag:'motor local', add_placeholder:'Cole um link magnet, info hash ou URL .torrent…', add_btn:'Adicionar',
+    sample_text:'Quer testar?', sample_link:'Carregar o exemplo Sintel (Creative Commons)',
+    autosave_label:'Salvar automaticamente torrents concluídos no meu dispositivo',
+    tab_all:'Todos', tab_downloading:'Baixando', tab_seeding:'Semeando',
+    stat_downloaded:'Baixado', stat_dl_speed:'Velocidade', stat_active:'Ativos', stat_seeding:'Semeando',
+    empty_main:'Cole um link magnet acima para começar.', empty_filter:'Nenhum torrent nesta vista.',
+    st_fetching:'Obtendo', st_seeding:'Semeando', st_paused:'Pausado', st_error:'Erro', st_downloading:'Baixando {p}%',
+    save:'Salvar', downloading:'Baixando…', save_to_device:'Salvar', retry:'Tentar de novo', pause:'Pausar', resume:'Retomar', remove:'Remover',
+    hide_files:'Ocultar arquivos', files_n:'{n} arquivos', peers:'pares', done:'pronto',
+    w_welcome_t:'Bem-vindo ao TorrentDrop', w_welcome_s:'Configuração rápida — menos de um minuto.', w_lang:'Idioma',
+    w_next:'Avançar', w_back:'Voltar', w_get_started:'Começar',
+    w_seed_t:'Compartilhar & semear', w_seed_s:'Ao terminar um download, o TorrentDrop deve continuar enviando para outros?',
+    w_seed_yes_t:'Continuar semeando (recomendado)', w_seed_yes_d:'Fique conectado e envie para ajudar a rede.',
+    w_seed_no_t:'Parar ao concluir', w_seed_no_d:'Termina o download e para de enviar imediatamente.',
+    w_ratio:'Parar no ratio (0 = sempre)', w_ratio_hint:'ex.: 2 = enviar o dobro do que baixou.',
+    w_done_t:'Tudo pronto', w_done_s:'TorrentDrop está pronto. Cole um link magnet.',
+    s_title:'Configurações', s_sub:'Algumas mudanças se aplicam após reiniciar.', s_lang:'Idioma', s_seed:'Semear',
+    s_seed_on:'Continuar semeando após baixar', s_seed_off:'Parar de enviar ao concluir', s_ratio:'Limite de ratio (0 = ilimitado)',
+    s_autosave:'Salvar arquivos concluídos no meu dispositivo', s_save:'Salvar', s_cancel:'Cancelar', s_saved:'Configurações salvas', s_restart_note:'Mudanças de conexão/pasta valem após reiniciar.'
+  },
+  ar: {
+    app_tag:'محرك محلي', add_placeholder:'الصق رابط مغناطيسي أو info hash أو رابط ‎.torrent…', add_btn:'إضافة',
+    sample_text:'تريد التجربة؟', sample_link:'تحميل مثال Sintel (المشاع الإبداعي)',
+    autosave_label:'حفظ التورنتات المكتملة تلقائيًا على جهازي',
+    tab_all:'الكل', tab_downloading:'التنزيل', tab_seeding:'المشاركة',
+    stat_downloaded:'تم التنزيل', stat_dl_speed:'السرعة', stat_active:'نشط', stat_seeding:'المشاركة',
+    empty_main:'الصق رابطًا مغناطيسيًا بالأعلى للبدء.', empty_filter:'لا توجد تورنتات في هذا العرض.',
+    st_fetching:'جارٍ الجلب', st_seeding:'مشاركة', st_paused:'متوقف', st_error:'خطأ', st_downloading:'تنزيل {p}%',
+    save:'حفظ', downloading:'جارٍ التنزيل…', save_to_device:'حفظ', retry:'إعادة', pause:'إيقاف', resume:'متابعة', remove:'إزالة',
+    hide_files:'إخفاء الملفات', files_n:'{n} ملفات', peers:'أقران', done:'تم',
+    w_welcome_t:'مرحبًا بك في TorrentDrop', w_welcome_s:'إعداد سريع — أقل من دقيقة.', w_lang:'اللغة',
+    w_next:'التالي', w_back:'رجوع', w_get_started:'ابدأ',
+    w_seed_t:'المشاركة والبذر', w_seed_s:'بعد انتهاء التنزيل، هل يستمر TorrentDrop في الرفع للآخرين؟',
+    w_seed_yes_t:'الاستمرار في البذر (مستحسن)', w_seed_yes_d:'ابقَ متصلًا وارفع لمساعدة الشبكة.',
+    w_seed_no_t:'التوقف عند الانتهاء', w_seed_no_d:'أكمل التنزيل ثم أوقف الرفع فورًا.',
+    w_ratio:'التوقف عند النسبة (0 = دائمًا)', w_ratio_hint:'مثال: 2 يعني رفع ضعف ما نزّلته.',
+    w_done_t:'كل شيء جاهز', w_done_s:'TorrentDrop جاهز. الصق رابطًا مغناطيسيًا.',
+    s_title:'الإعدادات', s_sub:'بعض التغييرات تُطبّق بعد إعادة التشغيل.', s_lang:'اللغة', s_seed:'البذر',
+    s_seed_on:'الاستمرار في البذر بعد التنزيل', s_seed_off:'إيقاف الرفع عند الانتهاء', s_ratio:'حد النسبة (0 = بلا حد)',
+    s_autosave:'حفظ الملفات المكتملة على جهازي', s_save:'حفظ', s_cancel:'إلغاء', s_saved:'تم حفظ الإعدادات', s_restart_note:'تغييرات الاتصال/المجلد تُطبّق بعد إعادة التشغيل.'
+  },
+  zh: {
+    app_tag:'本地引擎', add_placeholder:'粘贴磁力链接、info hash 或 .torrent 网址…', add_btn:'添加',
+    sample_text:'想测试一下？', sample_link:'加载 Sintel 示例（知识共享）',
+    autosave_label:'自动将完成的种子保存到我的设备',
+    tab_all:'全部', tab_downloading:'下载中', tab_seeding:'做种',
+    stat_downloaded:'已下载', stat_dl_speed:'下载速度', stat_active:'活动', stat_seeding:'做种',
+    empty_main:'在上方粘贴磁力链接即可开始下载。', empty_filter:'此视图中没有种子。',
+    st_fetching:'获取中', st_seeding:'做种', st_paused:'已暂停', st_error:'错误', st_downloading:'下载中 {p}%',
+    save:'保存', downloading:'下载中…', save_to_device:'保存到设备', retry:'重试', pause:'暂停', resume:'继续', remove:'移除',
+    hide_files:'隐藏文件', files_n:'{n} 个文件', peers:'节点', done:'完成',
+    w_welcome_t:'欢迎使用 TorrentDrop', w_welcome_s:'快速设置 — 不到一分钟。', w_lang:'语言',
+    w_next:'下一步', w_back:'返回', w_get_started:'开始使用',
+    w_seed_t:'分享与做种', w_seed_s:'下载完成后，TorrentDrop 是否继续向他人上传？',
+    w_seed_yes_t:'继续做种（推荐）', w_seed_yes_d:'保持连接并上传，帮助整个网络。',
+    w_seed_no_t:'完成后停止', w_seed_no_d:'下载完成后立即停止上传。',
+    w_ratio:'达到分享率时停止（0 = 永久）', w_ratio_hint:'例如 2 表示上传量是下载量的两倍后停止。',
+    w_done_t:'全部就绪', w_done_s:'TorrentDrop 已就绪。粘贴磁力链接开始。',
+    s_title:'设置', s_sub:'部分更改在重启后生效。', s_lang:'语言', s_seed:'做种',
+    s_seed_on:'下载后继续做种', s_seed_off:'完成后停止上传', s_ratio:'分享率上限（0 = 无限）',
+    s_autosave:'将完成的文件保存到我的设备', s_save:'保存', s_cancel:'取消', s_saved:'设置已保存', s_restart_note:'连接/文件夹更改在重启后生效。'
+  },
+  hi: {
+    app_tag:'लोकल इंजन', add_placeholder:'मैग्नेट लिंक, info hash या .torrent URL पेस्ट करें…', add_btn:'जोड़ें',
+    sample_text:'टेस्ट करना है?', sample_link:'Sintel नमूना लोड करें (Creative Commons)',
+    autosave_label:'पूर्ण टोरेंट अपने डिवाइस पर स्वतः सहेजें',
+    tab_all:'सभी', tab_downloading:'डाउनलोड', tab_seeding:'सीडिंग',
+    stat_downloaded:'डाउनलोड हुआ', stat_dl_speed:'गति', stat_active:'सक्रिय', stat_seeding:'सीडिंग',
+    empty_main:'शुरू करने के लिए ऊपर एक मैग्नेट लिंक पेस्ट करें।', empty_filter:'इस दृश्य में कोई टोरेंट नहीं।',
+    st_fetching:'प्राप्त हो रहा', st_seeding:'सीडिंग', st_paused:'रुका हुआ', st_error:'त्रुटि', st_downloading:'डाउनलोड {p}%',
+    save:'सहेजें', downloading:'डाउनलोड हो रहा…', save_to_device:'डिवाइस पर सहेजें', retry:'फिर से', pause:'रोकें', resume:'जारी रखें', remove:'हटाएँ',
+    hide_files:'फ़ाइलें छिपाएँ', files_n:'{n} फ़ाइलें', peers:'पीयर', done:'पूर्ण',
+    w_welcome_t:'TorrentDrop में आपका स्वागत है', w_welcome_s:'त्वरित सेटअप — एक मिनट से कम।', w_lang:'भाषा',
+    w_next:'आगे', w_back:'पीछे', w_get_started:'शुरू करें',
+    w_seed_t:'साझा करना और सीडिंग', w_seed_s:'डाउनलोड पूरा होने के बाद, क्या TorrentDrop दूसरों को अपलोड करता रहे?',
+    w_seed_yes_t:'सीडिंग जारी रखें (अनुशंसित)', w_seed_yes_d:'जुड़े रहें और अपलोड करें — नेटवर्क की मदद करें।',
+    w_seed_no_t:'पूरा होने पर रोकें', w_seed_no_d:'डाउनलोड पूरा करें, फिर तुरंत अपलोड रोक दें।',
+    w_ratio:'अनुपात पर रोकें (0 = हमेशा)', w_ratio_hint:'जैसे 2 = डाउनलोड का दोगुना अपलोड करके रोकें।',
+    w_done_t:'सब तैयार है', w_done_s:'TorrentDrop तैयार है। एक मैग्नेट लिंक पेस्ट करें।',
+    s_title:'सेटिंग्स', s_sub:'कुछ बदलाव रीस्टार्ट के बाद लागू होते हैं।', s_lang:'भाषा', s_seed:'सीडिंग',
+    s_seed_on:'डाउनलोड के बाद सीडिंग जारी रखें', s_seed_off:'पूरा होने पर अपलोड रोकें', s_ratio:'अनुपात सीमा (0 = असीमित)',
+    s_autosave:'पूर्ण फ़ाइलें मेरे डिवाइस पर सहेजें', s_save:'सहेजें', s_cancel:'रद्द', s_saved:'सेटिंग्स सहेजी गईं', s_restart_note:'कनेक्शन/फ़ोल्डर बदलाव रीस्टार्ट पर लागू होंगे।'
+  }
+};
+var I18N_EXTRA = {
+  en:{ s_location:'Download location', s_browse:'Change…', s_location_hint:'Where finished files are saved on this machine. Applies to new torrents.',
+       tab_scheduled:'Scheduled', tab_history:'History',
+       sch_title:'Schedule download', sch_when:'Start at', sch_confirm:'Schedule', sch_cancel:'Cancel',
+       sch_need_link:'Paste a magnet link first', sch_added:'Scheduled', sch_past:'Pick a future time',
+       scheduled_empty:'No scheduled downloads. Paste a link and tap the clock to schedule one.',
+       history_empty:'No completed downloads yet.', redownload:'Download again', clear_history:'Clear history',
+       cancel_sched:'Cancel', starts_label:'starts', completed_label:'completed',
+       st_completed:'Completed', open_folder:'Show in folder' },
+  es:{ s_location:'Carpeta de descargas', s_browse:'Cambiar…', s_location_hint:'Dónde se guardan los archivos en este equipo. Aplica a nuevos torrents.' },
+  fr:{ s_location:'Dossier de téléchargement', s_browse:'Changer…', s_location_hint:'Où les fichiers sont enregistrés sur cet appareil. Pour les nouveaux torrents.' },
+  de:{ s_location:'Download-Ordner', s_browse:'Ändern…', s_location_hint:'Wo fertige Dateien auf diesem Gerät gespeichert werden. Gilt für neue Torrents.' },
+  pt:{ s_location:'Pasta de download', s_browse:'Alterar…', s_location_hint:'Onde os arquivos são salvos neste dispositivo. Vale para novos torrents.' },
+  ar:{ s_location:'مجلد التنزيل', s_browse:'تغيير…', s_location_hint:'مكان حفظ الملفات على هذا الجهاز. يُطبّق على التورنتات الجديدة.' },
+  zh:{ s_location:'下载位置', s_browse:'更改…', s_location_hint:'文件在本机的保存位置。适用于新的种子。' },
+  hi:{ s_location:'डाउनलोड स्थान', s_browse:'बदलें…', s_location_hint:'इस डिवाइस पर फ़ाइलें कहाँ सहेजी जाती हैं। नए टोरेंट पर लागू।' }
+};
+for (var _L in I18N_EXTRA){ if (I18N[_L]) for (var _K in I18N_EXTRA[_L]) I18N[_L][_K]=I18N_EXTRA[_L][_K]; }
+var lang = 'en';
+function t(key, vars){
+  var s = (I18N[lang] && I18N[lang][key]) || I18N.en[key] || key;
+  if (vars) for (var k in vars) s = s.replace('{'+k+'}', vars[k]);
+  return s;
+}
+function applyI18n(){
+  document.documentElement.setAttribute('lang', lang);
+  document.documentElement.setAttribute('dir', lang==='ar' ? 'rtl' : 'ltr');
+  var nodes = document.querySelectorAll('[data-i18n]');
+  for (var i=0;i<nodes.length;i++){ nodes[i].textContent = t(nodes[i].getAttribute('data-i18n')); }
+  var phs = document.querySelectorAll('[data-i18n-ph]');
+  for (var j=0;j<phs.length;j++){ phs[j].setAttribute('placeholder', t(phs[j].getAttribute('data-i18n-ph'))); }
+  renderAll();
+}
+
+/* ---- config + wizard ---- */
+var cfg = { setupComplete:true, language:'en', seeding:true, seedRatio:0 };
+async function fetchConfig(){
+  try { var d = await api('/api/config'); if (d && d.config) cfg = d.config; } catch(e){}
+  lang = cfg.language || 'en';
+  applyI18n();
+  return cfg;
+}
+async function saveConfigRemote(patch){
+  try { var d = await api('/api/config', patch); if (d && d.config) cfg = d.config; } catch(e){}
+}
+function langSelect(id, current){
+  var h='<select id="'+id+'">';
+  for (var i=0;i<LANGS.length;i++){ h+='<option value="'+LANGS[i][0]+'"'+(LANGS[i][0]===current?' selected':'')+'>'+LANGS[i][1]+'</option>'; }
+  return h+'</select>';
+}
+
+var wizStep=0, wiz={ language:'en', seeding:true, seedRatio:0 };
+function openWizard(){ wizStep=0; wiz={ language: lang||'en', seeding:true, seedRatio:0 }; document.getElementById('wizard').classList.add('show'); renderWizard(); }
+function closeWizard(){ document.getElementById('wizard').classList.remove('show'); }
+function dots(n,total){ var h='<div class="w-steps">'; for(var i=0;i<total;i++) h+='<span class="w-dot'+(i<=n?' on':'')+'"></span>'; return h+'</div>'; }
+function renderWizard(){
+  var m=document.getElementById('wizardModal'), h='';
+  if (wizStep===0){
+    h = dots(0,3)+
+      '<div class="w-logo"><i class="ti ti-magnet"></i></div>'+
+      '<h2>'+t('w_welcome_t')+'</h2><p class="sub">'+t('w_welcome_s')+'</p>'+
+      '<div class="field"><label>'+t('w_lang')+'</label>'+langSelect('wizLang', wiz.language)+'</div>'+
+      '<div class="w-actions"><span></span><button class="btn" id="wizNext">'+t('w_next')+'</button></div>';
+  } else if (wizStep===1){
+    h = dots(1,3)+
+      '<h2>'+t('w_seed_t')+'</h2><p class="sub">'+t('w_seed_s')+'</p>'+
+      '<div class="choice">'+
+        '<label class="opt'+(wiz.seeding?' sel':'')+'"><input type="radio" name="seed" value="yes"'+(wiz.seeding?' checked':'')+'><span><span class="o-title">'+t('w_seed_yes_t')+'</span><div class="o-desc">'+t('w_seed_yes_d')+'</div></span></label>'+
+        '<label class="opt'+(!wiz.seeding?' sel':'')+'"><input type="radio" name="seed" value="no"'+(!wiz.seeding?' checked':'')+'><span><span class="o-title">'+t('w_seed_no_t')+'</span><div class="o-desc">'+t('w_seed_no_d')+'</div></span></label>'+
+      '</div>'+
+      (wiz.seeding ? '<div class="field" style="margin-top:16px"><label>'+t('w_ratio')+'</label><input type="number" id="wizRatio" min="0" step="0.5" value="'+wiz.seedRatio+'"><div class="hint">'+t('w_ratio_hint')+'</div></div>' : '')+
+      '<div class="w-actions"><button class="btn ghost" id="wizBack">'+t('w_back')+'</button><button class="btn" id="wizNext">'+t('w_next')+'</button></div>';
+  } else {
+    h = dots(2,3)+
+      '<div class="w-logo"><i class="ti ti-circle-check"></i></div>'+
+      '<h2>'+t('w_done_t')+'</h2><p class="sub">'+t('w_done_s')+'</p>'+
+      '<div class="w-actions"><button class="btn ghost" id="wizBack">'+t('w_back')+'</button><button class="btn" id="wizFinish">'+t('w_get_started')+'</button></div>';
+  }
+  m.innerHTML=h;
+  var ls=document.getElementById('wizLang');
+  if (ls) ls.addEventListener('change', function(){ wiz.language=ls.value; lang=ls.value; applyI18n(); renderWizard(); });
+  var radios=m.querySelectorAll('input[name=seed]');
+  for (var i=0;i<radios.length;i++) radios[i].addEventListener('change', function(e){ wiz.seeding=(e.target.value==='yes'); renderWizard(); });
+  var rt=document.getElementById('wizRatio'); if (rt) rt.addEventListener('input', function(){ wiz.seedRatio=Math.max(0, parseFloat(rt.value)||0); });
+  var nx=document.getElementById('wizNext'); if (nx) nx.addEventListener('click', function(){ wizStep++; renderWizard(); });
+  var bk=document.getElementById('wizBack'); if (bk) bk.addEventListener('click', function(){ wizStep--; renderWizard(); });
+  var fn=document.getElementById('wizFinish'); if (fn) fn.addEventListener('click', async function(){
+    await saveConfigRemote({ setupComplete:true, language:wiz.language, seeding:wiz.seeding, seedRatio:wiz.seedRatio });
+    lang=wiz.language; applyI18n(); closeWizard(); showToast(t('w_done_t'));
+  });
+}
+
+/* ---- settings modal ---- */
+function openSettings(){
+  var m=document.getElementById('settingsModal');
+  m.innerHTML =
+    '<h2>'+t('s_title')+'</h2><p class="sub">'+t('s_sub')+'</p>'+
+    '<div class="field"><label>'+t('s_lang')+'</label>'+langSelect('setLang', lang)+'</div>'+
+    '<div class="field"><label>'+t('s_seed')+'</label><div class="choice">'+
+      '<label class="opt'+(cfg.seeding?' sel':'')+'"><input type="radio" name="setseed" value="yes"'+(cfg.seeding?' checked':'')+'><span class="o-title">'+t('s_seed_on')+'</span></label>'+
+      '<label class="opt'+(!cfg.seeding?' sel':'')+'"><input type="radio" name="setseed" value="no"'+(!cfg.seeding?' checked':'')+'><span class="o-title">'+t('s_seed_off')+'</span></label>'+
+    '</div></div>'+
+    '<div class="field"><label>'+t('s_ratio')+'</label><input type="number" id="setRatio" min="0" step="0.5" value="'+(cfg.seedRatio||0)+'"></div>'+
+    '<div class="field"><label>'+t('s_location')+'</label>'+
+      '<div style="display:flex;gap:8px"><input type="text" id="setDir" value="'+escapeHtml(cfg.downloadDir||'')+'"'+(window.tdNative?' readonly':'')+' style="flex:1;min-width:0"><button class="btn ghost" type="button" id="setBrowse">'+t('s_browse')+'</button></div>'+
+      '<div class="hint">'+t('s_location_hint')+'</div></div>'+
+    (isDesktop?'':'<label class="autosave" style="margin:0 0 6px"><input type="checkbox" id="setAutosave"'+(autoSave?' checked':'')+'> '+t('s_autosave')+'</label>')+
+    '<div class="field hint">'+t('s_restart_note')+'</div>'+
+    '<div class="w-actions"><button class="btn ghost" id="setCancel">'+t('s_cancel')+'</button><button class="btn" id="setSave">'+t('s_save')+'</button></div>';
+  document.getElementById('settingsOverlay').classList.add('show');
+  var srs=m.querySelectorAll('input[name=setseed]');
+  for (var i=0;i<srs.length;i++) srs[i].addEventListener('change', function(){
+    var sel=m.querySelectorAll('.opt'); for (var k=0;k<sel.length;k++) sel[k].classList.remove('sel');
+    this.closest('.opt').classList.add('sel');
+  });
+  document.getElementById('setCancel').addEventListener('click', closeSettings);
+  document.getElementById('setBrowse').addEventListener('click', async function(){
+    var dirInput=document.getElementById('setDir');
+    if (window.tdNative && window.tdNative.pickFolder){
+      try { var picked=await window.tdNative.pickFolder(); if (picked) dirInput.value=picked; } catch(e){}
+    } else { dirInput.removeAttribute('readonly'); dirInput.focus(); }
+  });
+  document.getElementById('setSave').addEventListener('click', async function(){
+    var checked=m.querySelector('input[name=setseed]:checked');
+    var newLang=document.getElementById('setLang').value;
+    var seeding=checked?checked.value==='yes':cfg.seeding;
+    var ratio=Math.max(0, parseFloat(document.getElementById('setRatio').value)||0);
+    var dir=document.getElementById('setDir').value.trim();
+    var asEl=document.getElementById('setAutosave');
+    if (asEl){ autoSave=asEl.checked; autoSaveChk.checked=asEl.checked; try{ localStorage.setItem('td-autosave', asEl.checked?'on':'off'); }catch(e){} }
+    var patch={ language:newLang, seeding:seeding, seedRatio:ratio };
+    if (dir) patch.downloadDir=dir;
+    await saveConfigRemote(patch);
+    lang=newLang; applyI18n(); closeSettings(); showToast(t('s_saved'));
+  });
+}
+function closeSettings(){ document.getElementById('settingsOverlay').classList.remove('show'); }
+
+/* ---- schedule modal ---- */
+function openSchedule(){
+  var val=inputEl.value.trim();
+  if (!val){ showToast(t('sch_need_link')); return; }
+  var dt=new Date(Date.now()+3600000); dt.setSeconds(0,0);
+  var pad=function(n){return String(n).padStart(2,'0');};
+  var local=dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate())+'T'+pad(dt.getHours())+':'+pad(dt.getMinutes());
+  var srcLabel=val, mm=/[?&]dn=([^&]+)/i.exec(val);
+  if (mm){ try{ srcLabel=decodeURIComponent(mm[1].replace(/\+/g,' ')); }catch(e){ srcLabel=mm[1]; } }
+  var m=document.getElementById('scheduleModal');
+  m.innerHTML='<div class="w-logo"><i class="ti ti-clock"></i></div>'+
+    '<h2>'+t('sch_title')+'</h2>'+
+    '<div class="src-pill"><i class="ti ti-link"></i><span>'+escapeHtml(srcLabel)+'</span></div>'+
+    '<div class="field"><label>'+t('sch_when')+'</label><input type="datetime-local" id="schWhen" value="'+local+'"></div>'+
+    '<div class="w-actions"><button class="btn ghost" id="schCancel">'+t('sch_cancel')+'</button><button class="btn" id="schConfirm">'+t('sch_confirm')+'</button></div>';
+  document.getElementById('scheduleOverlay').classList.add('show');
+  document.getElementById('schCancel').addEventListener('click', closeSchedule);
+  document.getElementById('schConfirm').addEventListener('click', async function(){
+    var startAt=Date.parse(document.getElementById('schWhen').value);
+    if (!startAt || startAt<=Date.now()){ showToast(t('sch_past')); return; }
+    try { var d=await api('/api/schedule',{input:val,startAt:startAt}); if (d.error){ showToast(d.error); return; } }
+    catch(e){ showToast('Engine not reachable'); return; }
+    inputEl.value=''; closeSchedule(); showToast(t('sch_added')); setFilter('scheduled'); poll();
+  });
+}
+function closeSchedule(){ document.getElementById('scheduleOverlay').classList.remove('show'); }
+async function clearHistory(){ try{ await api('/api/history/clear',{}); history=[]; renderAll(); }catch(e){} }
+async function cancelSchedule(id){ try{ await api('/api/schedule/cancel',{id:id}); scheduled=scheduled.filter(function(s){return s.id!==id;}); renderAll(); }catch(e){} }
+
+/* ---- API ---- */
+async function api(path, body){
+  var opts = { method: body?'POST':'GET' };
+  if (body){ opts.headers={'Content-Type':'application/json'}; opts.body=JSON.stringify(body); }
+  var r = await fetch(path, opts);
+  if (r.status === 401){ location.reload(); throw new Error('unauthorized'); }
+  return r.json();
+}
+
+async function poll(){
+  try {
+    var data = await api('/api/torrents');
+    var list = data.torrents || [];
+    handleCompletions(list);
+    torrents = list;
+    connected = true;
+    bannerEl.classList.remove('show');
+    if (filter==='history'){ try { history=(await api('/api/history')).history||[]; }catch(e){} }
+    if (filter==='scheduled'){ try { scheduled=(await api('/api/scheduled')).scheduled||[]; }catch(e){} }
+  } catch(e){
+    connected = false;
+    bannerEl.classList.add('show');
+  }
+  renderAll();
+}
+
+// Detect torrents that just transitioned into "seeding" (finished) and auto-save them.
+function handleCompletions(list){
+  for (var i=0;i<list.length;i++){
+    var t=list[i];
+    var prev=seenStatus[t.infoHash];
+    if (autoSave && t.status==='seeding' && prev && prev!=='seeding' && !autoSaved[t.infoHash]){
+      autoSaved[t.infoHash]=true;
+      autoDownload(t);
+    }
+    seenStatus[t.infoHash]=t.status;
+  }
+}
+
+function autoDownload(o){
+  var files=(o.files||[]).filter(function(f){ return f.done; });
+  if (!files.length) return;
+  showToast('“'+truncate(o.name||'Torrent',32)+'” complete — saving to your device…');
+  var delay=0;
+  for (var i=0;i<files.length;i++){
+    (function(idx){ setTimeout(function(){ save(o.infoHash, idx); }, delay); })(files[i].index);
+    delay+=1200; // stagger so the browser doesn't drop simultaneous downloads
+  }
+}
+
+async function addInput(val){
+  val = (val==null?inputEl.value:val).trim();
+  if (!val) return;
+  inputEl.value=''; setFilter('all');
+  try {
+    var d = await api('/api/add', { input: val });
+    if (d.error) showToast(d.duplicate?'Already added':d.error);
+    else { showToast('Torrent added'); poll(); }
+  } catch(e){ showToast('Local engine not reachable'); }
+}
+
+async function pause(ih){ try{ await api('/api/pause',{infoHash:ih}); poll(); }catch(e){} }
+async function resume(ih){ try{ await api('/api/resume',{infoHash:ih}); poll(); }catch(e){} }
+async function remove(ih){ delete seenStatus[ih]; delete autoSaved[ih]; try{ await api('/api/remove',{infoHash:ih}); showToast('Removed — files deleted'); poll(); }catch(e){} }
+async function retry(ih){ var o=find(ih); if(!o) return; delete seenStatus[ih]; delete autoSaved[ih]; try{ await api('/api/remove',{infoHash:ih}); await api('/api/add',{input:o.magnetURI||ih}); poll(); }catch(e){} }
+async function save(ih, idx){
+  var url='/api/download?ih='+encodeURIComponent(ih)+'&idx='+idx;
+  var o=find(ih); var f=(o&&o.files)?o.files[idx]:null; var fname=(f&&f.name)?f.name:('download-'+idx);
+
+  // Best path: stream straight to a file the user picks (File System Access API).
+  // Bytes flow disk->browser->disk without buffering the whole file in memory,
+  // so multi-GB downloads work. Requires a user gesture, so this only runs on a click.
+  if (window.showSaveFilePicker){
+    var handle;
+    try { handle = await window.showSaveFilePicker({ suggestedName: fname }); }
+    catch(e){ if (e && e.name==='AbortError') return; handle = null; } // cancelled, or not allowed here
+    if (handle){
+      try {
+        var writable = await handle.createWritable();
+        var resp = await fetch(url);
+        if (!resp.ok || !resp.body) throw new Error('stream unavailable');
+        await resp.body.pipeTo(writable);            // streams to disk, closes on finish
+        showToast('Saved “'+truncate(fname,32)+'” to your device');
+        return;
+      } catch(e){
+        showToast('Save failed — falling back to browser download'); // fall through
+      }
+    }
+  }
+
+  // Fallback: classic browser download. Now resumable for free via Accept-Ranges.
+  var a=document.createElement('a'); a.href=url;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+/* ---- rendering ---- */
+function statusInfo(o){
+  switch(o.status){
+    case 'fetching': return { cls:'', text:t('st_fetching') };
+    case 'seeding': return { cls:'seeding', text:t('st_seeding') };
+    case 'completed': return { cls:'seeding', text:t('st_completed') };
+    case 'paused': return { cls:'', text:t('st_paused') };
+    case 'error': return { cls:'error', text:t('st_error') };
+    default: return { cls:'downloading', text:t('st_downloading',{p:Math.round((o.progress||0)*100)}) };
+  }
+}
+function barFor(progress, status){
+  var pct=Math.max(0,Math.min(100,Math.round((progress||0)*100)));
+  var color = status==='error'?'var(--error)':(status==='seeding'?'var(--accent-hover)':'var(--accent)');
+  return '<div class="bar"><span style="width:'+pct+'%;background:'+color+';"></span></div>';
+}
+function fileRowHtml(o,f){
+  var pct=Math.round((f.progress||0)*100);
+  var btn = !f.done
+    ? '<button class="mini" disabled><i class="ti ti-download"></i> '+t('downloading')+'</button>'
+    : (isDesktop
+        ? '<button class="mini" data-action="openfolder" data-path="'+escapeHtml(o.savePath||'')+'" title="'+t('open_folder')+'"><i class="ti ti-folder"></i></button>'
+        : '<button class="mini primary" data-action="save" data-ih="'+o.infoHash+'" data-idx="'+f.index+'"><i class="ti ti-download"></i> '+t('save')+'</button>');
+  return '<div class="file">'+
+    '<i class="ti '+getFileIcon(f.name)+' f-icon"></i>'+
+    '<div class="f-main">'+
+      '<div class="f-name" title="'+escapeHtml(f.name)+'">'+escapeHtml(truncate(f.name,48))+'</div>'+
+      '<div class="f-sub">'+formatSize(f.length)+' • '+pct+'%</div>'+
+      barFor(f.progress,o.status)+
+    '</div>'+btn+'</div>';
+}
+function cardHtml(o){
+  var si=statusInfo(o);
+  var bc = o.status==='seeding'?' seeding':(o.status==='error'?' error':'');
+  var single = o.files.length===1;
+  var sub = o.status==='error' ? escapeHtml(o.error||'Something went wrong')
+                               : formatSize(o.downloaded)+' / '+(o.length?formatSize(o.length):'—');
+  var meta='';
+  if (o.status==='completed'){
+    meta='<div class="t-meta"><span><i class="ti ti-circle-check"></i> '+t('done')+'</span></div>';
+  } else if (o.status!=='error' && o.status!=='fetching'){
+    meta='<div class="t-meta">'+
+      '<span><i class="ti ti-arrow-down"></i> '+formatSpeed(o.downloadSpeed)+'</span>'+
+      '<span><i class="ti ti-arrow-up"></i> '+formatSpeed(o.uploadSpeed)+'</span>'+
+      '<span><i class="ti ti-users"></i> '+(o.numPeers||0)+' '+t('peers')+'</span>'+
+      '<span><i class="ti ti-clock"></i> '+(o.status==='seeding'?t('done'):formatETA((o.timeRemaining||0)/1000))+'</span>'+
+    '</div>';
+  }
+  var finished = o.status==='completed' || o.status==='seeding' || (single && o.files[0] && o.files[0].done);
+  var openBtn = '<button class="mini primary" data-action="openfolder" data-path="'+escapeHtml(o.savePath||'')+'"><i class="ti ti-folder"></i> '+t('open_folder')+'</button>';
+  var actions='';
+  if (o.status==='error') actions+='<button class="mini primary" data-action="retry" data-ih="'+o.infoHash+'"><i class="ti ti-refresh"></i> '+t('retry')+'</button>';
+  else if (o.status==='downloading'||o.status==='fetching') actions+='<button class="mini" data-action="pause" data-ih="'+o.infoHash+'"><i class="ti ti-player-pause"></i> '+t('pause')+'</button>';
+  else if (o.status==='paused') actions+='<button class="mini" data-action="resume" data-ih="'+o.infoHash+'"><i class="ti ti-player-play"></i> '+t('resume')+'</button>';
+
+  if (single && o.status!=='error'){
+    if (o.files[0] && o.files[0].done){
+      actions += isDesktop ? openBtn
+        : '<button class="mini primary" data-action="save" data-ih="'+o.infoHash+'" data-idx="0"><i class="ti ti-download"></i> '+t('save_to_device')+'</button>';
+    } else {
+      actions += '<button class="mini" disabled><i class="ti ti-download"></i> '+t('downloading')+'</button>';
+    }
+  } else if (o.files.length>1){
+    if (finished && isDesktop) actions += openBtn;
+    var open=!!expanded[o.infoHash];
+    actions+='<button class="mini" data-action="toggle" data-ih="'+o.infoHash+'"><i class="ti '+(open?'ti-chevron-up':'ti-chevron-down')+'"></i> '+(open?t('hide_files'):t('files_n',{n:o.files.length}))+'</button>';
+  }
+  actions+='<button class="mini danger" data-action="remove" data-ih="'+o.infoHash+'"><i class="ti ti-trash"></i> '+t('remove')+'</button>';
+
+  var filesHtml='';
+  if (!single && expanded[o.infoHash] && o.files.length){
+    var rows=''; for (var i=0;i<o.files.length;i++) rows+=fileRowHtml(o,o.files[i]);
+    filesHtml='<div class="files">'+rows+'</div>';
+  }
+
+  return '<div class="torrent'+bc+'">'+
+    '<div class="t-head">'+
+      '<div class="t-icon"><i class="ti '+getTorrentIcon(o)+'"></i></div>'+
+      '<div class="t-main">'+
+        '<div class="t-title-row">'+
+          '<span class="t-name" title="'+escapeHtml(o.name)+'">'+escapeHtml(o.name)+'</span>'+
+          '<span class="pill '+si.cls+'">'+si.text+'</span>'+
+        '</div>'+
+        '<div class="t-sub">'+sub+'</div>'+
+      '</div>'+
+    '</div>'+
+    barFor(o.progress,o.status)+meta+
+    '<div class="t-actions">'+actions+'</div>'+filesHtml+
+  '</div>';
+}
+function visibleTorrents(){
+  return torrents.filter(function(t){
+    if (filter==='downloading') return t.status==='downloading'||t.status==='fetching'||t.status==='paused';
+    if (filter==='seeding') return t.status==='seeding';
+    return true;
+  });
+}
+function statCard(icon,label,value){
+  return '<div class="stat"><div class="label"><i class="ti '+icon+'"></i> '+label+'</div><div class="value">'+value+'</div></div>';
+}
+function renderStats(){
+  var total=0,speed=0,active=0,seeding=0;
+  for (var i=0;i<torrents.length;i++){ var to=torrents[i];
+    total+=to.downloaded||0; speed+=to.downloadSpeed||0;
+    if (to.status==='seeding') seeding++;
+    else if (to.status==='downloading'||to.status==='fetching'||to.status==='paused') active++;
+  }
+  statsEl.innerHTML = statCard('ti-database',t('stat_downloaded'),formatSize(total))+
+    statCard('ti-bolt',t('stat_dl_speed'),formatSpeed(speed))+
+    statCard('ti-arrow-down-circle',t('stat_active'),String(active))+
+    statCard('ti-arrow-up-circle',t('stat_seeding'),String(seeding));
+}
+function renderAll(){
+  renderStats();
+  if (filter==='history') return renderHistory();
+  if (filter==='scheduled') return renderScheduled();
+  if (!torrents.length){
+    listEl.innerHTML='<div class="empty"><i class="ti ti-magnet"></i>'+t('empty_main')+'</div>';
+    return;
+  }
+  var vis=visibleTorrents();
+  if (!vis.length){ listEl.innerHTML='<div class="empty"><i class="ti ti-filter"></i>'+t('empty_filter')+'</div>'; return; }
+  var html=''; for (var i=0;i<vis.length;i++) html+=cardHtml(vis[i]);
+  listEl.innerHTML=html;
+}
+function fmtDate(ms){ try { return new Date(ms).toLocaleString(); } catch(e){ return ''; } }
+function fmtCountdown(ms){
+  var s=Math.max(0,Math.round((ms-Date.now())/1000));
+  var d=Math.floor(s/86400), h=Math.floor((s%86400)/3600), m=Math.floor((s%3600)/60);
+  if (d>0) return d+'d '+h+'h'; if (h>0) return h+'h '+m+'m'; if (m>0) return m+'m'; return s+'s';
+}
+function renderHistory(){
+  if (!history.length){ listEl.innerHTML='<div class="empty"><i class="ti ti-history"></i>'+t('history_empty')+'</div>'; return; }
+  var html='<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="mini" id="clearHistBtn"><i class="ti ti-trash"></i> '+t('clear_history')+'</button></div>';
+  for (var i=0;i<history.length;i++){ var h=history[i];
+    html+='<div class="torrent"><div class="t-head">'+
+      '<div class="t-icon"><i class="ti ti-circle-check"></i></div>'+
+      '<div class="t-main"><div class="t-title-row"><span class="t-name" title="'+escapeHtml(h.name)+'">'+escapeHtml(h.name)+'</span></div>'+
+      '<div class="t-sub">'+formatSize(h.length)+' • '+t('completed_label')+' '+escapeHtml(fmtDate(h.completedAt))+'</div></div></div>'+
+      (h.magnetURI?'<div class="t-actions" style="margin-top:10px"><button class="mini primary" data-action="redownload" data-magnet="'+escapeHtml(h.magnetURI)+'"><i class="ti ti-download"></i> '+t('redownload')+'</button></div>':'')+
+    '</div>';
+  }
+  listEl.innerHTML=html;
+}
+function renderScheduled(){
+  if (!scheduled.length){ listEl.innerHTML='<div class="empty"><i class="ti ti-clock"></i>'+t('scheduled_empty')+'</div>'; return; }
+  var html='';
+  for (var i=0;i<scheduled.length;i++){ var s=scheduled[i];
+    var label=(s.input||'').replace(/^magnet:\?.*?dn=/i,'').split('&')[0];
+    try { label=decodeURIComponent(label); } catch(e){}
+    if (label.length>52||/^magnet:/i.test(label)) label=t('tab_scheduled')+' item';
+    html+='<div class="torrent"><div class="t-head">'+
+      '<div class="t-icon"><i class="ti ti-clock"></i></div>'+
+      '<div class="t-main"><div class="t-title-row"><span class="t-name">'+escapeHtml(label)+'</span></div>'+
+      '<div class="t-sub">'+t('starts_label')+' '+escapeHtml(fmtDate(s.startAt))+' • '+fmtCountdown(s.startAt)+'</div></div></div>'+
+      '<div class="t-actions" style="margin-top:10px"><button class="mini danger" data-action="cancelsched" data-id="'+s.id+'"><i class="ti ti-x"></i> '+t('cancel_sched')+'</button></div>'+
+    '</div>';
+  }
+  listEl.innerHTML=html;
+}
+
+/* ---- events ---- */
+addBtn.addEventListener('click', function(){ addInput(); });
+inputEl.addEventListener('keydown', function(e){ if (e.key==='Enter'){ e.preventDefault(); addInput(); } });
+sampleBtn.addEventListener('click', function(){ addInput(SINTEL); });
+document.getElementById('scheduleBtn').addEventListener('click', openSchedule);
+document.getElementById('scheduleOverlay').addEventListener('click', function(e){ if (e.target===this) closeSchedule(); });
+
+function setFilter(name){
+  filter=name;
+  var tabs=tabsEl.querySelectorAll('.tab');
+  for (var i=0;i<tabs.length;i++) tabs[i].classList.toggle('active', tabs[i].getAttribute('data-filter')===name);
+  renderAll();
+}
+tabsEl.addEventListener('click', function(e){ var b=e.target.closest('.tab'); if (b) setFilter(b.getAttribute('data-filter')); });
+
+listEl.addEventListener('click', function(e){
+  if (e.target.closest('#clearHistBtn')){ clearHistory(); return; }
+  var btn=e.target.closest('[data-action]'); if (!btn) return;
+  var a=btn.getAttribute('data-action'); var ih=btn.getAttribute('data-ih');
+  if (a==='toggle'){ expanded[ih]=!expanded[ih]; renderAll(); }
+  else if (a==='pause') pause(ih);
+  else if (a==='resume') resume(ih);
+  else if (a==='remove') remove(ih);
+  else if (a==='retry') retry(ih);
+  else if (a==='save') save(ih, parseInt(btn.getAttribute('data-idx'),10)||0);
+  else if (a==='redownload') addInput(btn.getAttribute('data-magnet'));
+  else if (a==='cancelsched') cancelSchedule(btn.getAttribute('data-id'));
+  else if (a==='openfolder'){ if (window.tdNative && window.tdNative.showItem) window.tdNative.showItem(btn.getAttribute('data-path')); }
+});
+
+function applyTheme(t){ document.documentElement.setAttribute('data-theme',t); themeBtn.innerHTML='<i class="ti '+(t==='dark'?'ti-sun':'ti-moon')+'"></i>'; try{localStorage.setItem('td-theme',t);}catch(e){} }
+function initTheme(){ var s=null; try{s=localStorage.getItem('td-theme');}catch(e){} applyTheme(s||((window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light')); }
+themeBtn.addEventListener('click', function(){ applyTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark'); });
+
+function initAutoSave(){
+  if (isDesktop){
+    // Desktop: files already land in the chosen download folder — no second "save".
+    autoSave = false;
+    var lbl = document.querySelector('.autosave'); if (lbl) lbl.style.display = 'none';
+    return;
+  }
+  try { autoSave = localStorage.getItem('td-autosave') !== 'off'; } catch(e){}
+  autoSaveChk.checked = autoSave;
+}
+autoSaveChk.addEventListener('change', function(){
+  autoSave = autoSaveChk.checked;
+  try { localStorage.setItem('td-autosave', autoSave ? 'on' : 'off'); } catch(e){}
+  showToast(autoSave ? 'Auto-save on' : 'Auto-save off');
+});
+
+document.getElementById('settingsBtn').addEventListener('click', openSettings);
+document.getElementById('settingsOverlay').addEventListener('click', function(e){ if (e.target===this) closeSettings(); });
+
+initTheme();
+initAutoSave();
+renderAll();
+fetchConfig().then(function(){ if (!cfg.setupComplete) openWizard(); });
+poll();
+setInterval(poll, 1000);
+</script>
+</body>
+</html>
